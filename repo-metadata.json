@@ -1,0 +1,18 @@
+{
+  "name": "lowcode-ai-workflows",
+  "title": "Low-Code AI Workflows",
+  "description": "n8n, Make, and Zapier-style AI workflow templates with safe mock AI steps, routing, manual review, and handoff proof.",
+  "private": true,
+  "topics": [
+    "n8n",
+    "make",
+    "zapier",
+    "ai-workflows",
+    "llm",
+    "automation",
+    "airtable",
+    "workflow-templates",
+    "upwork-proof"
+  ],
+  "automation_kit_relationship": "Concrete companion proof repo; Automation Kit remains the reusable local proof framework."
+}
