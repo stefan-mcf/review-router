@@ -8,6 +8,32 @@ Concrete proof project for low-code + AI jobs: controlled AI steps inside audita
 
 Automation Kit is the reusable local proof framework for running and validating automation patterns. This repo is a concrete client-shaped proof asset: it narrows the story to one Upwork job lane so proposals can link directly to the most relevant evidence.
 
+
+## Current promotion status
+
+Priority: Fourth.
+
+Role: Controlled AI-in-workflow proof for n8n, Make, Zapier, Claude, and OpenAI jobs.
+
+Rationale: High market coverage, but stronger after the core API and deterministic workflow proof are visible.
+
+
+## Automation Kit usage-case contract
+
+This repo exists to prove Automation Kit usage in one buyer-shaped workflow. It should stay thin: reusable runner logic belongs in `automation-kit`; this repo owns the case-study fixtures, workflow-specific wrapper, output evidence, and proposal-facing explanation.
+
+Ready-to-link requirements:
+
+- thin wrapper around Automation Kit rather than a duplicate framework;
+- synthetic input fixtures and deterministic output examples;
+- tests for the main flow and one failure or review path;
+- case-study documentation with first milestone shape;
+- screenshot or text evidence from one verified local run;
+- empty credential placeholders only;
+- no live SaaS, cloud, payment, or delivery side effects by default.
+
+Until those requirements are met, keep this repo private and treat it as a scoped backlog proof project, not a portfolio link.
+
 ## Client-facing promise
 
 I can add AI to workflows without making them fragile, unreviewable, or dependent on live credentials for the first proof.
