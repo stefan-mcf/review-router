@@ -1,17 +1,17 @@
-# Low-Code Mapping
+# Low-Code Mapping Overview
 
-## n8n
+Detailed per-platform docs:
+- `docs/low-code/n8n.md`
+- `docs/low-code/make.md`
+- `docs/low-code/zapier.md`
 
-Webhook -> Set -> Mock AI Classifier -> Switch -> Support/Sales/Manual Review branch.
+Per-template credential boundary summary:
 
-## Make
-
-Webhook -> Text parser -> Mock AI module -> Router -> branch-specific handoff.
-
-## Zapier
-
-Trigger -> Formatter -> AI by Zapier placeholder -> Paths -> handoff action.
-
-## Credential boundary
-
-All live AI and low-code credentials are empty placeholders only. This proof uses deterministic mock AI output.
+| Template | n8n | Make | Zapier | Review gate |
+|---|---|---|---|---|
+| lead-enrichment-router | Webhook -> Set -> AI placeholder -> Switch -> CRM/manual research | Webhook -> Tools -> Router | Trigger -> Formatter -> Paths | low-confidence enrichment |
+| inbox-triage-router | Inbox trigger -> Switch | Email parser -> Router | Email trigger -> Paths | uncertain classification |
+| support-urgency-sentiment | Ticket trigger -> urgency route | Ticket parser -> Router | Ticket trigger -> Paths | low-confidence escalation |
+| content-rss-summarizer | RSS -> summarize -> publish/review | Feed -> Router | Feed trigger -> Paths | editorial review |
+| creative-pack-review | brief -> manifest -> review | brief -> manifest -> review | brief -> manifest -> review | always required |
+| workflow-debug-replay | log -> diagnose -> fix path | log -> diagnose -> router | log -> diagnose -> paths | human approves fix path |

@@ -1,18 +1,18 @@
 {
   "name": "review-router",
   "title": "Review Router",
-  "description": "n8n, Make, and Zapier-style AI workflow templates with safe mock AI steps, routing, manual review, and handoff proof.",
-  "private": true,
+  "description": "Deterministic, auditable review-gated AI workflow templates for low-code and API automation.",
+  "visibility_target": "public-ready",
   "topics": [
     "n8n",
     "make",
     "zapier",
     "ai-workflows",
-    "llm",
-    "automation",
+    "workflow-automation",
+    "api-integration",
     "airtable",
-    "workflow-templates",
-    "upwork-proof"
+    "human-in-the-loop",
+    "audit-log"
   ],
-  "automation_kit_relationship": "Concrete companion proof repo; Automation Kit remains the reusable local proof framework."
+  "automation_kit_relationship": "Thin spoke around Automation Kit vocabulary and fixture-safe proof surfaces."
 }

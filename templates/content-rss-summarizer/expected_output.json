@@ -1,0 +1,5 @@
+{
+  "routing_decision": "publish_queue",
+  "review_required": false,
+  "destination": "local_output"
+}

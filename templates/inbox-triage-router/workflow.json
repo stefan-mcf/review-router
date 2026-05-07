@@ -1,0 +1,391 @@
+{
+  "name": "inbox-triage-router",
+  "version": "1.0.0",
+  "description": "Deterministic inbox triage for sales, support, billing, or manual review.",
+  "input_schema": {
+    "type": "object",
+    "required": [
+      "subject",
+      "body"
+    ]
+  },
+  "output_schema": {
+    "type": "object",
+    "required": [
+      "routing_decision",
+      "review_required",
+      "mock_ai_output"
+    ]
+  },
+  "fixture_safe": true,
+  "live_services_used": false,
+  "synthetic_data_only": true,
+  "review_queue": "default",
+  "tags": [
+    "inbox-triage",
+    "support",
+    "sales",
+    "billing",
+    "zapier"
+  ],
+  "steps": [
+    {
+      "id": "trigger_inbound",
+      "title": "Trigger inbound payload",
+      "type": "trigger",
+      "description": "Accept synthetic fixture input",
+      "source": "fixture",
+      "next_step_id": "prepare_payload",
+      "failure": {
+        "error": "validation_error",
+        "next_step_id": "handoff_result"
+      },
+      "credential_boundaries": [
+        {
+          "service": "n8n",
+          "secret_name": "N8N_API_KEY",
+          "required_scopes": [
+            "workflow:read"
+          ],
+          "live_enabled_by_default": false
+        },
+        {
+          "service": "make",
+          "secret_name": "MAKE_API_TOKEN",
+          "required_scopes": [
+            "scenario:read"
+          ],
+          "live_enabled_by_default": false
+        },
+        {
+          "service": "zapier",
+          "secret_name": "ZAPIER_WEBHOOK_SECRET",
+          "required_scopes": [
+            "trigger:read"
+          ],
+          "live_enabled_by_default": false
+        },
+        {
+          "service": "api",
+          "secret_name": "REVIEW_ROUTER_ENABLE_LIVE_SERVICES",
+          "required_scopes": [
+            "local-only"
+          ],
+          "live_enabled_by_default": false
+        }
+      ]
+    },
+    {
+      "id": "prepare_payload",
+      "title": "Prepare payload",
+      "type": "transform",
+      "description": "Normalize or derive fields for deterministic routing",
+      "transform": "normalize_input",
+      "next_step_id": "deterministic_ai",
+      "failure": {
+        "error": "validation_error",
+        "next_step_id": "handoff_result"
+      },
+      "credential_boundaries": [
+        {
+          "service": "n8n",
+          "secret_name": "N8N_API_KEY",
+          "required_scopes": [
+            "workflow:read"
+          ],
+          "live_enabled_by_default": false
+        },
+        {
+          "service": "make",
+          "secret_name": "MAKE_API_TOKEN",
+          "required_scopes": [
+            "scenario:read"
+          ],
+          "live_enabled_by_default": false
+        },
+        {
+          "service": "zapier",
+          "secret_name": "ZAPIER_WEBHOOK_SECRET",
+          "required_scopes": [
+            "trigger:read"
+          ],
+          "live_enabled_by_default": false
+        },
+        {
+          "service": "api",
+          "secret_name": "REVIEW_ROUTER_ENABLE_LIVE_SERVICES",
+          "required_scopes": [
+            "local-only"
+          ],
+          "live_enabled_by_default": false
+        }
+      ]
+    },
+    {
+      "id": "deterministic_ai",
+      "title": "Deterministic mock AI step",
+      "type": "ai",
+      "description": "Mock classification or enrichment step",
+      "model_family": "deterministic-mock",
+      "uncertainty_threshold": 0.75,
+      "output_fields": [
+        "category",
+        "confidence",
+        "reason"
+      ],
+      "next_step_id": "review_gate",
+      "failure": {
+        "error": "ai_uncertainty",
+        "next_step_id": "review_gate"
+      },
+      "credential_boundaries": [
+        {
+          "service": "n8n",
+          "secret_name": "N8N_API_KEY",
+          "required_scopes": [
+            "workflow:read"
+          ],
+          "live_enabled_by_default": false
+        },
+        {
+          "service": "make",
+          "secret_name": "MAKE_API_TOKEN",
+          "required_scopes": [
+            "scenario:read"
+          ],
+          "live_enabled_by_default": false
+        },
+        {
+          "service": "zapier",
+          "secret_name": "ZAPIER_WEBHOOK_SECRET",
+          "required_scopes": [
+            "trigger:read"
+          ],
+          "live_enabled_by_default": false
+        },
+        {
+          "service": "api",
+          "secret_name": "REVIEW_ROUTER_ENABLE_LIVE_SERVICES",
+          "required_scopes": [
+            "local-only"
+          ],
+          "live_enabled_by_default": false
+        }
+      ]
+    },
+    {
+      "id": "review_gate",
+      "title": "Manual review gate",
+      "type": "review_gate",
+      "description": "Require human review on uncertainty",
+      "policy": {
+        "reason": "Review inbox items when the route is uncertain",
+        "queue": "default",
+        "candidate_routes": [
+          "support",
+          "sales",
+          "billing"
+        ],
+        "recommended_next_action": "Inspect packet and approve deterministic next route"
+      },
+      "next_step_id": "route_output",
+      "failure": {
+        "error": "routing_error",
+        "next_step_id": "handoff_result"
+      },
+      "credential_boundaries": [
+        {
+          "service": "n8n",
+          "secret_name": "N8N_API_KEY",
+          "required_scopes": [
+            "workflow:read"
+          ],
+          "live_enabled_by_default": false
+        },
+        {
+          "service": "make",
+          "secret_name": "MAKE_API_TOKEN",
+          "required_scopes": [
+            "scenario:read"
+          ],
+          "live_enabled_by_default": false
+        },
+        {
+          "service": "zapier",
+          "secret_name": "ZAPIER_WEBHOOK_SECRET",
+          "required_scopes": [
+            "trigger:read"
+          ],
+          "live_enabled_by_default": false
+        },
+        {
+          "service": "api",
+          "secret_name": "REVIEW_ROUTER_ENABLE_LIVE_SERVICES",
+          "required_scopes": [
+            "local-only"
+          ],
+          "live_enabled_by_default": false
+        }
+      ]
+    },
+    {
+      "id": "route_output",
+      "title": "Route output",
+      "type": "route",
+      "description": "Route based on deterministic category",
+      "route_key_field": "category",
+      "routes": [
+        {
+          "key": "support",
+          "next_step_id": "deliver_output",
+          "description": "Route to support"
+        },
+        {
+          "key": "sales",
+          "next_step_id": "deliver_output",
+          "description": "Route to sales"
+        },
+        {
+          "key": "billing",
+          "next_step_id": "deliver_output",
+          "description": "Route to billing"
+        },
+        {
+          "key": "manual_review",
+          "next_step_id": "deliver_output",
+          "description": "Route to manual_review"
+        }
+      ],
+      "next_step_id": "deliver_output",
+      "failure": {
+        "error": "routing_error",
+        "next_step_id": "handoff_result"
+      },
+      "credential_boundaries": [
+        {
+          "service": "n8n",
+          "secret_name": "N8N_API_KEY",
+          "required_scopes": [
+            "workflow:read"
+          ],
+          "live_enabled_by_default": false
+        },
+        {
+          "service": "make",
+          "secret_name": "MAKE_API_TOKEN",
+          "required_scopes": [
+            "scenario:read"
+          ],
+          "live_enabled_by_default": false
+        },
+        {
+          "service": "zapier",
+          "secret_name": "ZAPIER_WEBHOOK_SECRET",
+          "required_scopes": [
+            "trigger:read"
+          ],
+          "live_enabled_by_default": false
+        },
+        {
+          "service": "api",
+          "secret_name": "REVIEW_ROUTER_ENABLE_LIVE_SERVICES",
+          "required_scopes": [
+            "local-only"
+          ],
+          "live_enabled_by_default": false
+        }
+      ]
+    },
+    {
+      "id": "deliver_output",
+      "title": "Destination output",
+      "type": "destination",
+      "description": "Deliver local synthetic output",
+      "destination": "local_output",
+      "next_step_id": "handoff_result",
+      "failure": {
+        "error": "destination_error",
+        "next_step_id": "handoff_result"
+      },
+      "credential_boundaries": [
+        {
+          "service": "n8n",
+          "secret_name": "N8N_API_KEY",
+          "required_scopes": [
+            "workflow:read"
+          ],
+          "live_enabled_by_default": false
+        },
+        {
+          "service": "make",
+          "secret_name": "MAKE_API_TOKEN",
+          "required_scopes": [
+            "scenario:read"
+          ],
+          "live_enabled_by_default": false
+        },
+        {
+          "service": "zapier",
+          "secret_name": "ZAPIER_WEBHOOK_SECRET",
+          "required_scopes": [
+            "trigger:read"
+          ],
+          "live_enabled_by_default": false
+        },
+        {
+          "service": "api",
+          "secret_name": "REVIEW_ROUTER_ENABLE_LIVE_SERVICES",
+          "required_scopes": [
+            "local-only"
+          ],
+          "live_enabled_by_default": false
+        }
+      ]
+    },
+    {
+      "id": "handoff_result",
+      "title": "Write handoff note",
+      "type": "handoff",
+      "description": "Summarize the next action for a human operator",
+      "note_template": "Routing decision: {routing_decision}. Review required: {review_required}. Review reason: {review_reason}.",
+      "failure": {
+        "error": "transient_error",
+        "next_step_id": "handoff_result"
+      },
+      "credential_boundaries": [
+        {
+          "service": "n8n",
+          "secret_name": "N8N_API_KEY",
+          "required_scopes": [
+            "workflow:read"
+          ],
+          "live_enabled_by_default": false
+        },
+        {
+          "service": "make",
+          "secret_name": "MAKE_API_TOKEN",
+          "required_scopes": [
+            "scenario:read"
+          ],
+          "live_enabled_by_default": false
+        },
+        {
+          "service": "zapier",
+          "secret_name": "ZAPIER_WEBHOOK_SECRET",
+          "required_scopes": [
+            "trigger:read"
+          ],
+          "live_enabled_by_default": false
+        },
+        {
+          "service": "api",
+          "secret_name": "REVIEW_ROUTER_ENABLE_LIVE_SERVICES",
+          "required_scopes": [
+            "local-only"
+          ],
+          "live_enabled_by_default": false
+        }
+      ]
+    }
+  ]
+}

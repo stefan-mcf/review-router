@@ -1,0 +1,4 @@
+{
+  "error": "429 rate limit exceeded while calling external placeholder API",
+  "context": "Lead enrichment scenario retried three times and stalled"
+}

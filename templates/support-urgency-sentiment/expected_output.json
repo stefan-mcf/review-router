@@ -1,0 +1,5 @@
+{
+  "routing_decision": "escalate",
+  "review_required": false,
+  "destination": "local_output"
+}

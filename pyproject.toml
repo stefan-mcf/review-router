@@ -4,14 +4,29 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "review-router"
-version = "0.1.0"
-description = "Controlled AI workflow templates with deterministic mock AI and review branches"
+version = "0.2.0"
+description = "Deterministic, auditable review-gated AI workflow templates for low-code and API automation"
+readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"
-dependencies = []
+authors = [{ name = "stefan-mcf" }]
+dependencies = [
+  "pydantic>=2.7,<3",
+  "fastapi>=0.115,<1",
+  "uvicorn>=0.30,<1",
+]
 
 [project.optional-dependencies]
-dev = ["pytest>=8.0.0", "ruff>=0.4.0", "mypy>=1.10.0"]
+dev = [
+  "httpx>=0.27,<1",
+  "mypy>=1.10,<2",
+  "pillow>=10.3,<12",
+  "pytest>=8.0,<9",
+  "ruff>=0.4,<1",
+]
+
+[project.scripts]
+review-router = "review_router.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -20,13 +35,22 @@ include = ["review_router*"]
 [tool.ruff]
 target-version = "py311"
 line-length = 100
-src = ["src", "tests"]
+src = ["src", "tests", "scripts"]
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "N", "W"]
+select = ["E", "F", "I", "N", "W", "UP", "B"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
 
 [tool.mypy]
 python_version = "3.11"
 strict = true
-ignore_missing_imports = true
+ignore_missing_imports = false
+warn_unused_ignores = true
 exclude = ["tests/"]
+
+[[tool.mypy.overrides]]
+module = ["PIL.*"]
+ignore_missing_imports = true

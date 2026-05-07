@@ -5,6 +5,7 @@ __pycache__/
 *.py[cod]
 .venv/
 venv/
+.python-version
 build/
 dist/
 *.egg-info/
@@ -12,6 +13,13 @@ dist/
 .mypy_cache/
 .ruff_cache/
 .DS_Store
-output/
+.coverage
+htmlcov/
 artifacts/local/
+artifacts/queue/
+artifacts/runs/
+docs/plans/
+docs/lane-b-style-guide.md
+CONCEPT_SCOPE.md
+PLAN.md
 *.log
