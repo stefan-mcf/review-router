@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import subprocess
+import sys
 import textwrap
 from pathlib import Path
 from typing import Any
@@ -58,9 +59,16 @@ MONO_SMALL = font(15)
 
 
 def run(cmd: list[str], *, max_lines: int = 14) -> list[str]:
-    env = {**os.environ, "PYTHONPATH": os.environ.get("PYTHONPATH", "src")}
-    proc = subprocess.run(cmd, cwd=ROOT, text=True, capture_output=True, check=True, env=env)
+    python_bin = str(Path(sys.executable).resolve().parent)
+    env = {
+        **os.environ,
+        "PYTHONPATH": os.environ.get("PYTHONPATH", "src"),
+        "PATH": f"{python_bin}:{os.environ.get('PATH', '')}",
+    }
+    proc = subprocess.run(cmd, cwd=ROOT, text=True, capture_output=True, check=False, env=env)
     combined = (proc.stdout + proc.stderr).strip().splitlines()
+    if proc.returncode != 0:
+        combined = [f"command_exit_code={proc.returncode}", *combined]
     return combined[:max_lines] or ["command completed with no output"]
 
 
@@ -100,22 +108,6 @@ def wrap_lines(lines: list[str], width: int) -> list[str]:
             or [line]
         )
     return wrapped
-
-
-def draw_badge(
-    draw: ImageDraw.ImageDraw, xy: tuple[int, int], label: str, color: tuple[int, int, int]
-) -> int:
-    x, y = xy
-    pad_x = 14
-    pad_y = 8
-    bbox = draw.textbbox((0, 0), label, font=SMALL_FONT)
-    width = bbox[2] - bbox[0] + pad_x * 2
-    height = bbox[3] - bbox[1] + pad_y * 2
-    draw.rounded_rectangle(
-        (x, y, x + width, y + height), radius=14, fill=(20, 30, 48), outline=color, width=2
-    )
-    draw.text((x + pad_x, y + pad_y - 1), label, font=SMALL_FONT, fill=color)
-    return x + width + 10
 
 
 def draw_panel(
@@ -178,10 +170,6 @@ def render(
     )
     draw.text((58, 48), title, font=TITLE_FONT, fill=TEXT)
     draw.text((60, 90), subtitle, font=SUBTITLE_FONT, fill=MUTED)
-    x = WIDTH - 520
-    for label, color in [("LOCAL", GREEN), ("SYNTHETIC", BLUE), ("AUDITABLE", YELLOW)]:
-        x = draw_badge(draw, (x, 56), label, color)
-
     for panel in panels:
         draw_panel(
             draw,
@@ -210,16 +198,17 @@ def render(
 
 
 def main() -> None:
+    py = sys.executable
     client = TestClient(create_app())
 
-    list_output = run(["python3.11", "-m", "review_router.cli", "list"], max_lines=16)
+    list_output = run([py, "-m", "review_router.cli", "list"], max_lines=16)
     validate_output = run(
-        ["python3.11", "-m", "review_router.cli", "validate", "inbox-triage-router"],
+        [py, "-m", "review_router.cli", "validate", "inbox-triage-router"],
         max_lines=12,
     )
     inbox_run_output = run(
         [
-            "python3.11",
+            py,
             "-m",
             "review_router.cli",
             "run",
@@ -231,7 +220,7 @@ def main() -> None:
     )
     creative_run_output = run(
         [
-            "python3.11",
+            py,
             "-m",
             "review_router.cli",
             "run",
@@ -241,13 +230,13 @@ def main() -> None:
         ],
         max_lines=22,
     )
-    queue_output = run(["python3.11", "-m", "review_router.cli", "queue", "list"], max_lines=22)
-    pytest_output = run(["python3.11", "-m", "pytest", "-q"], max_lines=10)
-    ruff_output = run(["python3.11", "-m", "ruff", "check", "."], max_lines=8)
-    mypy_output = run(["python3.11", "-m", "mypy", "src"], max_lines=8)
-    template_sweep_output = run(["python3.11", "scripts/template_validation_sweep.py"], max_lines=8)
+    queue_output = run([py, "-m", "review_router.cli", "queue", "list"], max_lines=22)
+    pytest_output = run([py, "-m", "pytest", "-q"], max_lines=10)
+    ruff_output = run([py, "-m", "ruff", "check", "."], max_lines=8)
+    mypy_output = run([py, "-m", "mypy", "src"], max_lines=8)
+    template_sweep_output = run([py, "scripts/template_validation_sweep.py"], max_lines=8)
     readiness_output = run(
-        ["python3.11", "scripts/public_readiness_check.py"],
+        [py, "scripts/public_readiness_check.py"],
         max_lines=10,
     )
 
