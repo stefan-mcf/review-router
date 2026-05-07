@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from lowcode_ai_workflows.workflow import run_ai_triage
+from review_router.workflow import run_ai_triage
 
 
 def test_clear_support_email_routes_without_live_ai() -> None:

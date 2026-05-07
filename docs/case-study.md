@@ -1,4 +1,4 @@
-# Low-Code AI Workflow Case Study
+# Review Router Case Study
 
 A support email is routed through a controlled AI-style triage step. The AI output is deterministic and mock-first, with a manual review branch for uncertain messages.
 

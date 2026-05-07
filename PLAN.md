@@ -1,12 +1,12 @@
-# Low-Code AI Workflows — Comprehensive Tranched Implementation Plan
+# Review Router — Comprehensive Tranched Implementation Plan
 
 Date: 2026-05-05
-Repo: lowcode-ai-workflows
+Repo: review-router
 Purpose: build a concrete Upwork proof asset that complements Automation Kit.
 
 ## Strategic objective
 
-Concrete proof project for low-code + AI jobs: controlled AI steps inside auditable workflows, with node mappings and deterministic local proof.
+Concrete proof project for review-gated AI workflow jobs: controlled AI steps inside auditable workflows, with node mappings and deterministic local proof.
 
 Client-facing promise: I can add AI to workflows without making them fragile, unreviewable, or dependent on live credentials for the first proof.
 

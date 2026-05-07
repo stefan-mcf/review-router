@@ -1,12 +1,12 @@
-# Low-Code AI Workflows — Concept and Scope
+# Review Router — Concept and Scope
 
 Date: 2026-05-05
-Repo: lowcode-ai-workflows
+Repo: review-router
 Visibility target: private proof repo
 
 ## Concept pitch
 
-Concrete proof project for low-code + AI jobs: controlled AI steps inside auditable workflows, with node mappings and deterministic local proof.
+Concrete proof project for review-gated AI workflow jobs: controlled AI steps inside auditable workflows, with node mappings and deterministic local proof.
 
 This project exists because Automation Kit is a reusable tool/framework, while Upwork clients respond faster to concrete proof of a specific business workflow. The repo should prove one thing clearly: I can add AI to workflows without making them fragile, unreviewable, or dependent on live credentials for the first proof.
 

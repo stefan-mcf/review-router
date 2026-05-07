@@ -1,6 +1,6 @@
 {
-  "name": "lowcode-ai-workflows",
-  "title": "Low-Code AI Workflows",
+  "name": "review-router",
+  "title": "Review Router",
   "description": "n8n, Make, and Zapier-style AI workflow templates with safe mock AI steps, routing, manual review, and handoff proof.",
   "private": true,
   "topics": [
