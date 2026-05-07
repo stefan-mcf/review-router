@@ -22,9 +22,10 @@ for rel in tracked:
     if not path.is_file():
         continue
     text = path.read_text(errors="ignore")
-    for pattern in banned_patterns:
-        if pattern.search(text):
-            issues.append(f"{rel}: banned pattern {pattern.pattern}")
+    if rel != "scripts/public_readiness_check.py":
+        for pattern in banned_patterns:
+            if pattern.search(text):
+                issues.append(f"{rel}: banned pattern {pattern.pattern}")
     if rel.endswith((".json", ".md", ".py")):
         if "fixture_safe" in text and "live_services_used" not in text:
             issues.append(f"{rel}: fixture_safe appears without live_services_used")

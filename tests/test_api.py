@@ -10,7 +10,10 @@ client = TestClient(create_app())
 def test_health_endpoint() -> None:
     response = client.get("/health")
     assert response.status_code == 200
-    assert response.json()["fixture_safe"] is True
+    payload = response.json()
+    assert payload["fixture_safe"] is True
+    assert payload["live_services_used"] is False
+    assert payload["synthetic_data_only"] is True
 
 
 def test_templates_endpoint() -> None:
