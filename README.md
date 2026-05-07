@@ -77,7 +77,7 @@ Review Router is a thin spoke around Automation Kit vocabulary and safety rules 
 | `docs/public-readiness-checklist.md` | public-surface checklist |
 | `docs/automation-kit-backbone.md` | backbone relationship and optional integration path |
 | `docs/low-code/` | n8n, Make, and Zapier mapping details |
-| `docs/upwork/` | case-fit snippets and keyword mapping |
+| `docs/proposal-mapping.md` | capability-to-keyword fit and use-case positioning |
 
 ## Quality gates
 

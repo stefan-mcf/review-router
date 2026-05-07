@@ -1,4 +1,18 @@
-# Upwork Skills Index
+# Proposal Mapping
+
+Review Router fits projects that mention:
+- n8n
+- Make.com
+- Zapier
+- Airtable
+- Google Sheets
+- API integration
+- webhook routing
+- AI workflow classification
+- support triage
+- workflow debugging and replay
+
+Use this repo when the client needs a controlled AI step with a manual-review safety boundary.
 
 Capability-to-keyword map:
 - n8n / Make.com / Zapier: low-code mapping docs and template registry.
