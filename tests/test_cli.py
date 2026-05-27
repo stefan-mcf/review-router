@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import subprocess
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -11,7 +12,7 @@ ENV = {**os.environ, "PYTHONPATH": str(ROOT / "src")}
 
 def _run(*args: str) -> dict[str, object]:
     completed = subprocess.run(
-        ["python3.11", "-m", "review_router.cli", *args],
+        [sys.executable, "-m", "review_router.cli", *args],
         cwd=ROOT,
         capture_output=True,
         text=True,
