@@ -206,3 +206,7 @@ artifacts/                 gitignored queue and run outputs created at runtime
 ## License
 
 MIT License. See LICENSE.
+
+## Automation Tools Catalog
+
+Part of [Stefan's automation tools catalog](https://github.com/stefan-mcf/automation-tools).
