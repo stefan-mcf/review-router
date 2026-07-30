@@ -64,7 +64,7 @@ PYTHONPATH=src python3.11 -m review_router.cli queue list
 PYTHONPATH=src python3.11 -m review_router.cli replay <run_id>
 ```
 
-What this proves:
+Expected results:
 - templates are discoverable from a clean checkout;
 - workflow contracts validate before execution;
 - deterministic runs emit local artifacts and audit evidence;
