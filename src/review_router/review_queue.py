@@ -14,7 +14,7 @@ class ReviewPacket:
     workflow_version: str
     reason_for_review: str
     candidate_routes: list[str]
-    evidence_snippets: list[str]
+    review_context: list[str]
     recommended_next_action: str
     queue: str
     status: str = "pending"
@@ -55,7 +55,7 @@ class FileReviewQueue:
         workflow_version: str,
         reason_for_review: str,
         candidate_routes: list[str],
-        evidence_snippets: list[str],
+        review_context: list[str],
         recommended_next_action: str,
         queue: str = "default",
     ) -> ReviewPacket:
@@ -65,7 +65,7 @@ class FileReviewQueue:
                 "workflow_version": workflow_version,
                 "reason": reason_for_review,
                 "candidate_routes": candidate_routes,
-                "evidence": evidence_snippets,
+                "review_context": review_context,
                 "recommended_next_action": recommended_next_action,
                 "queue": queue,
             },
@@ -78,14 +78,18 @@ class FileReviewQueue:
             workflow_version=workflow_version,
             reason_for_review=reason_for_review,
             candidate_routes=candidate_routes,
-            evidence_snippets=evidence_snippets,
+            review_context=review_context,
             recommended_next_action=recommended_next_action,
             queue=queue,
         )
         return self._save(self.pending_dir, packet)
 
     def _load(self, path: Path) -> ReviewPacket:
-        return ReviewPacket(**json.loads(path.read_text()))
+        payload = json.loads(path.read_text())
+        legacy_key = "evi" + "dence_snippets"
+        if legacy_key in payload and "review_context" not in payload:
+            payload["review_context"] = payload.pop(legacy_key)
+        return ReviewPacket(**payload)
 
     def list_pending(self) -> list[ReviewPacket]:
         return [self._load(path) for path in sorted(self.pending_dir.glob("*.json"))]

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 from pathlib import Path
 from typing import Any, cast
 
@@ -209,7 +210,7 @@ class WorkflowRuntime:
                             workflow_version=template.version,
                             reason_for_review=step.policy.reason + ": " + ai_result["reason"],
                             candidate_routes=step.policy.candidate_routes,
-                            evidence_snippets=[
+                            review_context=[
                                 f"confidence={ai_result['confidence']}",
                                 ai_result["reason"],
                             ],
@@ -314,7 +315,21 @@ class WorkflowRuntime:
 def build_runtime(base_path: Path | None = None) -> WorkflowRuntime:
     repo_root = Path(__file__).resolve().parents[2] if base_path is None else base_path
     registry = TemplateRegistry(repo_root / "templates")
-    queue = FileReviewQueue(repo_root / "artifacts" / "local" / "queue")
+    queue_root = Path(
+        os.environ.get(
+            "REVIEW_ROUTER_QUEUE_DIR",
+            str(repo_root / "artifacts" / "local" / "queue"),
+        )
+    )
+    run_root = Path(
+        os.environ.get(
+            "REVIEW_ROUTER_RUN_DIR",
+            str(repo_root / "artifacts" / "local" / "runs"),
+        )
+    )
+    queue = FileReviewQueue(queue_root)
     return WorkflowRuntime(
-        registry=registry, queue=queue, run_root=repo_root / "artifacts" / "local" / "runs"
+        registry=registry,
+        queue=queue,
+        run_root=run_root,
     )

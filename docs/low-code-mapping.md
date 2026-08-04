@@ -9,7 +9,7 @@ Per-template credential boundary summary:
 
 | Template | n8n | Make | Zapier | Review gate |
 |---|---|---|---|---|
-| lead-enrichment-router | Webhook -> Set -> AI placeholder -> Switch -> CRM/manual research | Webhook -> Tools -> Router | Trigger -> Formatter -> Paths | low-confidence enrichment |
+| lead-enrichment-router | Webhook -> Set -> upstream classifier placeholder -> Switch -> CRM/manual research | Webhook -> Tools -> Router | Trigger -> Formatter -> Paths | low-confidence enrichment |
 | inbox-triage-router | Inbox trigger -> Switch | Email parser -> Router | Email trigger -> Paths | uncertain classification |
 | support-urgency-sentiment | Ticket trigger -> urgency route | Ticket parser -> Router | Ticket trigger -> Paths | low-confidence escalation |
 | content-rss-summarizer | RSS -> summarize -> publish/review | Feed -> Router | Feed trigger -> Paths | editorial review |

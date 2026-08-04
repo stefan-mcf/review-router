@@ -1,0 +1,31 @@
+{
+  "artifacts": [
+    {
+      "copy_sha256": "b9764f5ea01271802de30abfd1eb9f55d24f056bb1bd5a384ef53a04ef80dbed",
+      "file": "01-system-flow.png"
+    },
+    {
+      "copy_sha256": "57ae7d6e7e54fc750542622b5be0bb1a0e0052bf6c918c7f15bc9f4fa0c4a8d6",
+      "file": "02-interface-surface.png"
+    },
+    {
+      "copy_sha256": "496ed699b878195dfe9af90f97d07d48d351f4367697f180266e099a4180e824",
+      "file": "03-core-processing.png"
+    },
+    {
+      "copy_sha256": "f1b2dcd15003d8af2eccc0f93e11828b1103d91ef462d908ec2376e3ed518d18",
+      "file": "04-guardrail-path.png"
+    },
+    {
+      "copy_sha256": "53c1e860e3460972eff699f8f63584e8e86bb90f5523210bd513e32b9362251b",
+      "file": "05-output-readback.png"
+    },
+    {
+      "copy_sha256": "4908a264f01873a2c2528c182c455f11276136bbb283047787ef4356ee6c6c5d",
+      "file": "06-validation-scope.png"
+    }
+  ],
+  "schema_version": 1,
+  "source_fingerprint": "ef79064a02666d0e4de6c88f26e71369f5e4aeb86a23c60963e82c0ec37827a2",
+  "validation_status": "passed"
+}

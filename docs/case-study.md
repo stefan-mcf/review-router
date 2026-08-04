@@ -1,8 +1,8 @@
-# Case Study
+# Case study: deterministic policy before workflow action
 
-Review Router proves a common client problem: how to insert AI into workflow automation without losing auditability or forcing immediate live credentials.
+Human Review Router addresses a common client problem: how to consume classifier output in a workflow without losing auditability or forcing an immediate destination action.
 
-Proof scenario families:
+Implemented scenario families:
 - lead enrichment routed toward CRM or manual research;
 - inbox triage across support, sales, billing, and manual review;
 - support severity routing with fixture-safe notification planning;
@@ -11,5 +11,6 @@ Proof scenario families:
 - workflow debug/replay classification paired to automation repair work.
 
 Why this matters:
-- clients buying n8n, Make, Zapier, Airtable, and API integration work often need controlled AI steps, not open-ended autonomous agents;
-- review gates and replayable audit logs reduce trust risk during the first delivery milestone.
+- clients buying n8n, Make, Zapier, Airtable, and API integration work often need explicit confidence policies and human signoff;
+- review gates and replayable audit logs reduce trust risk during the first delivery milestone;
+- the repository consumes category, confidence, and rationale fields but does not load or call a model.

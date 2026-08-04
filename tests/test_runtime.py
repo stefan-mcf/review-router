@@ -34,3 +34,18 @@ def test_uncertain_route_enqueues_review_packet() -> None:
     assert result["review_required"] is True
     pending = runtime.queue.list_pending()
     assert any(packet.packet_id == result["review_packet_id"] for packet in pending)
+
+
+def test_runtime_honors_isolated_artifact_directories(tmp_path: Path, monkeypatch) -> None:
+    queue_dir = tmp_path / "queue"
+    run_dir = tmp_path / "runs"
+    monkeypatch.setenv("REVIEW_ROUTER_QUEUE_DIR", str(queue_dir))
+    monkeypatch.setenv("REVIEW_ROUTER_RUN_DIR", str(run_dir))
+
+    runtime = build_runtime(ROOT)
+    fixture = runtime.registry.load_fixture("inbox-triage-router", "sample-input.json")
+    result = runtime.run("inbox-triage-router", fixture)
+
+    assert runtime.queue.root == queue_dir
+    assert runtime.run_root == run_dir
+    assert (run_dir / result["run_id"] / "audit-log.json").is_file()

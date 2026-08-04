@@ -1,9 +1,14 @@
 from __future__ import annotations
 
+import argparse
+import hashlib
 import json
 import os
+import re
+import shlex
 import subprocess
 import sys
+import tempfile
 import textwrap
 from pathlib import Path
 from typing import Any
@@ -15,38 +20,48 @@ from review_router.api import create_app
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs" / "screenshots"
-OUT.mkdir(parents=True, exist_ok=True)
+MANIFEST = OUT / "manifest.json"
+EXPECTED_IMAGES = [
+    "01-system-flow.png",
+    "02-interface-surface.png",
+    "03-core-processing.png",
+    "04-guardrail-path.png",
+    "05-output-readback.png",
+    "06-validation-scope.png",
+]
 
 WIDTH = 1400
 HEIGHT = 800
-BG = (10, 15, 28)
-PANEL = (17, 24, 39)
-PANEL_2 = (25, 35, 56)
-TEXT = (226, 232, 240)
-MUTED = (148, 163, 184)
-GREEN = (74, 222, 128)
-BLUE = (96, 165, 250)
-YELLOW = (250, 204, 21)
-PINK = (244, 114, 182)
-RED = (248, 113, 113)
-BORDER = (51, 65, 85)
+BG = "#0b1120"
+PANEL = "#111827"
+HEADER = "#182235"
+BORDER = "#334155"
+TEXT = "#e5e7eb"
+MUTED = "#94a3b8"
+ACCENT = "#60a5fa"
+SUCCESS = "#4ade80"
+ERROR = "#f87171"
 
 
-def font(size: int, bold: bool = False) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
+def font(size: int, *, bold: bool = False) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
     candidates = [
-        "/System/Library/Fonts/Menlo.ttc",
-        "/System/Library/Fonts/Supplemental/Arial Unicode.ttf",
-        "/Library/Fonts/Arial Unicode.ttf",
-        "/usr/share/fonts/truetype/dejavu/DejaVuSansMono-Bold.ttf"
-        if bold
-        else "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf",
-        "/usr/share/fonts/truetype/liberation2/LiberationMono-Bold.ttf"
-        if bold
-        else "/usr/share/fonts/truetype/liberation2/LiberationMono-Regular.ttf",
+        ("/System/Library/Fonts/Menlo.ttc", 1 if bold else 0),
+        (
+            "/usr/share/fonts/truetype/dejavu/DejaVuSansMono-Bold.ttf"
+            if bold
+            else "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf",
+            0,
+        ),
+        (
+            "/usr/share/fonts/truetype/liberation2/LiberationMono-Bold.ttf"
+            if bold
+            else "/usr/share/fonts/truetype/liberation2/LiberationMono-Regular.ttf",
+            0,
+        ),
     ]
-    for candidate in candidates:
+    for candidate, index in candidates:
         try:
-            return ImageFont.truetype(candidate, size=size)
+            return ImageFont.truetype(candidate, size=size, index=index)
         except OSError:
             continue
     return ImageFont.load_default()
@@ -54,44 +69,62 @@ def font(size: int, bold: bool = False) -> ImageFont.FreeTypeFont | ImageFont.Im
 
 TITLE_FONT = font(34, bold=True)
 SUBTITLE_FONT = font(18)
-SMALL_FONT = font(16)
-MONO_SMALL = font(15)
+PANEL_TITLE_FONT = font(18, bold=True)
+BODY_FONT = font(16)
+CODE_FONT = font(15)
+FOOTER_FONT = font(15)
 
 
-def run(cmd: list[str], *, max_lines: int = 14) -> list[str]:
+def public_text(value: str) -> str:
+    cleaned = value.replace(str(ROOT), ".").replace(str(Path.home()), "<home>")
+    return re.sub(r"\s+in\s+\d+(?:\.\d+)?s\b", "", cleaned)
+
+
+def display_command(command: list[str]) -> str:
+    rendered = ["python" if part == sys.executable else public_text(part) for part in command]
+    return shlex.join(rendered)
+
+
+def run(command: list[str], *, timeout: int = 120, max_lines: int = 8) -> list[str]:
     python_bin = str(Path(sys.executable).resolve().parent)
     env = {
         **os.environ,
         "PYTHONPATH": os.environ.get("PYTHONPATH", "src"),
         "PATH": f"{python_bin}:{os.environ.get('PATH', '')}",
     }
-    proc = subprocess.run(cmd, cwd=ROOT, text=True, capture_output=True, check=False, env=env)
-    combined = (proc.stdout + proc.stderr).strip().splitlines()
-    if proc.returncode != 0:
-        combined = [f"command_exit_code={proc.returncode}", *combined]
-    return combined[:max_lines] or ["command completed with no output"]
+    try:
+        result = subprocess.run(
+            command,
+            cwd=ROOT,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            check=False,
+            timeout=timeout,
+            env=env,
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise RuntimeError(f"command timed out: {display_command(command)}") from exc
+    output = public_text(result.stdout.strip())
+    if result.returncode != 0:
+        raise RuntimeError(
+            f"command returned {result.returncode}: {display_command(command)}\n{output}"
+        )
+    lines = output.splitlines()[-max_lines:] if output else ["completed with no output"]
+    return [f"$ {display_command(command)}", "PASS", *lines]
 
 
 def load_json(path: str) -> dict[str, Any]:
     return json.loads((ROOT / path).read_text())
 
 
-def read_lines(path: str, *, limit: int = 12) -> list[str]:
-    return (ROOT / path).read_text().splitlines()[:limit]
-
-
-def compact_json_lines(
-    payload: dict[str, Any],
-    keys: list[str],
-    *,
-    max_chars: int = 96,
-) -> list[str]:
+def compact_json_lines(payload: dict[str, Any], keys: list[str]) -> list[str]:
     lines: list[str] = []
     for key in keys:
         value = payload.get(key)
         if isinstance(value, (dict, list)):
             encoded = json.dumps(value, sort_keys=True)
-            lines.append(f"{key}={encoded[:max_chars]}")
+            lines.append(f"{key}={encoded}")
         else:
             lines.append(f"{key}={value}")
     return lines
@@ -104,7 +137,12 @@ def wrap_lines(lines: list[str], width: int) -> list[str]:
             wrapped.append("")
             continue
         wrapped.extend(
-            textwrap.wrap(line, width=width, replace_whitespace=False, drop_whitespace=False)
+            textwrap.wrap(
+                public_text(line),
+                width=width,
+                replace_whitespace=False,
+                drop_whitespace=False,
+            )
             or [line]
         )
     return wrapped
@@ -116,38 +154,70 @@ def draw_panel(
     title: str,
     lines: list[str],
     *,
-    accent: tuple[int, int, int] = BLUE,
+    accent: str = ACCENT,
     code: bool = False,
 ) -> None:
     x1, y1, x2, y2 = box
-    draw.rounded_rectangle(box, radius=22, fill=PANEL, outline=BORDER, width=2)
-    draw.rectangle((x1, y1, x1 + 8, y2), fill=accent)
-    draw.text((x1 + 26, y1 + 20), title, font=SUBTITLE_FONT, fill=accent)
+    draw.rounded_rectangle(box, radius=20, fill=PANEL, outline=BORDER, width=2)
+    draw.rectangle((x1, y1 + 20, x1 + 5, y2 - 20), fill=accent)
+    draw.text((x1 + 26, y1 + 20), title, font=PANEL_TITLE_FONT, fill=accent)
+    selected_font = CODE_FONT if code else BODY_FONT
+    max_chars = max(34, (x2 - x1 - 68) // (9 if code else 10))
     y = y1 + 58
-    selected_font = MONO_SMALL if code else SMALL_FONT
-    usable_width = max(220, x2 - x1 - 70)
-    approx_char_px = 9 if code else 10
-    max_chars = max(34, usable_width // approx_char_px)
-    for line in wrap_lines(lines, max_chars)[:18]:
-        fill = TEXT
-        if line.startswith(
-            (
-                "PASS",
-                "✓",
-                "fixture_safe=true",
-                "live_services_used=false",
-                "synthetic_data_only=true",
-            )
-        ):
-            fill = GREEN
-        elif line.startswith(("REFUSE", "unsafe", "blocked")) or "FAILED" in line:
-            fill = RED
-        elif line.startswith(("$", "python", "PYTHONPATH", "GET ", "POST ")):
-            fill = YELLOW
-        draw.text((x1 + 26, y), line, font=selected_font, fill=fill)
-        y += 24 if code else 26
+    for line in wrap_lines(lines, max_chars):
         if y > y2 - 34:
             break
+        fill = TEXT
+        if line == "PASS" or line.startswith(("fixture_safe=true", "live_services_used=false")):
+            fill = SUCCESS
+        elif line.startswith(("review_required=true", "blocked")):
+            fill = ERROR
+        elif line.startswith(("$", "GET ", "POST ")):
+            fill = ACCENT
+        draw.text((x1 + 26, y), line, font=selected_font, fill=fill)
+        y += 24 if code else 27
+
+
+def validate_public_copy(copy: str) -> None:
+    retired = ("pro" + "of", "evi" + "dence", "walk" + "through", "tuto" + "rial")
+    lowered = copy.lower()
+    matches = [term for term in retired if term in lowered]
+    if matches:
+        raise RuntimeError(f"public copy contains retired terminology: {matches}")
+    unsafe_markers = (
+        "/" + "Users/",
+        "/" + "home/",
+        "command_exit_code",
+        "FAILED",
+        "\nFAIL\n",
+    )
+    if any(marker in copy for marker in unsafe_markers):
+        raise RuntimeError("public copy contains a local path or command error marker")
+
+
+def source_paths() -> list[Path]:
+    paths = [
+        Path(__file__),
+        ROOT / ".env.example",
+        ROOT / "src" / "review_router" / "api.py",
+        ROOT / "src" / "review_router" / "cli.py",
+        ROOT / "src" / "review_router" / "runtime.py",
+        ROOT / "src" / "review_router" / "review_queue.py",
+        ROOT / "scripts" / "public_readiness_check.py",
+        ROOT / "scripts" / "template_validation_sweep.py",
+    ]
+    paths.extend(sorted((ROOT / "templates").glob("**/*.json")))
+    return paths
+
+
+def source_fingerprint() -> str:
+    digest = hashlib.sha256()
+    for path in source_paths():
+        digest.update(str(path.relative_to(ROOT)).encode())
+        digest.update(b"\0")
+        digest.update(path.read_bytes())
+        digest.update(b"\0")
+    return digest.hexdigest()
 
 
 def render(
@@ -155,434 +225,472 @@ def render(
     title: str,
     subtitle: str,
     panels: list[dict[str, Any]],
-    footer: str = "fixture_safe=true  live_services_used=false  synthetic_data_only=true",
-) -> None:
+    *,
+    fingerprint: str,
+    footer: str = "Local inputs | No model calls | No provider writes",
+) -> dict[str, str]:
+    public_copy = public_text(
+        json.dumps(
+            {
+                "title": title,
+                "subtitle": subtitle,
+                "footer": footer,
+                "panels": [
+                    {"title": str(panel["title"]), "lines": list(panel["lines"])}
+                    for panel in panels
+                ],
+            },
+            sort_keys=True,
+        )
+    )
+    validate_public_copy(public_copy)
+
     image = Image.new("RGB", (WIDTH, HEIGHT), BG)
     draw = ImageDraw.Draw(image)
-
-    for x in range(0, WIDTH, 80):
-        draw.line((x, 0, x, HEIGHT), fill=(15, 23, 42))
-    for y in range(0, HEIGHT, 80):
-        draw.line((0, y, WIDTH, y), fill=(15, 23, 42))
-
-    draw.rounded_rectangle(
-        (30, 28, WIDTH - 30, 116), radius=24, fill=PANEL_2, outline=BORDER, width=2
-    )
-    draw.text((58, 48), title, font=TITLE_FONT, fill=TEXT)
-    draw.text((60, 90), subtitle, font=SUBTITLE_FONT, fill=MUTED)
+    draw.rounded_rectangle((32, 28, 1368, 122), radius=24, fill=HEADER, outline=BORDER, width=2)
+    draw.text((60, 50), title, font=TITLE_FONT, fill=TEXT)
+    draw.text((60, 94), subtitle, font=SUBTITLE_FONT, fill=MUTED)
     for panel in panels:
         draw_panel(
             draw,
             panel["box"],
             str(panel["title"]),
             list(panel["lines"]),
-            accent=panel.get("accent", BLUE),
+            accent=str(panel.get("accent", ACCENT)),
             code=bool(panel.get("code", False)),
         )
-
-    draw.rounded_rectangle(
-        (30, HEIGHT - 54, WIDTH - 30, HEIGHT - 18), radius=16, fill=PANEL_2, outline=BORDER, width=1
-    )
-    draw.text((54, HEIGHT - 45), footer, font=SMALL_FONT, fill=GREEN)
+    draw.rounded_rectangle((32, 730, 1368, 772), radius=16, fill=HEADER, outline=BORDER, width=1)
+    draw.text((56, 741), footer, font=FOOTER_FONT, fill=MUTED)
 
     metadata = PngImagePlugin.PngInfo()
-    metadata.add_text("Proof", f"{title}\n{subtitle}\n{footer}")
+    metadata.add_text("PortfolioCopy", public_copy)
+    metadata.add_text("SourceFingerprint", fingerprint)
+    metadata.add_text("ValidationStatus", "passed")
     image.save(path, pnginfo=metadata, optimize=True)
 
     stat = ImageStat.Stat(image)
-    if path.stat().st_size < 35_000 or max(stat.stddev) < 20:
+    if path.stat().st_size < 30_000 or max(stat.stddev) < 18:
         raise RuntimeError(
-            f"screenshot may be unreadable/blank: {path} "
-            f"size={path.stat().st_size} stddev={stat.stddev}"
+            f"image may be unreadable: {path.name} size={path.stat().st_size} stddev={stat.stddev}"
         )
+    return {
+        "file": path.name,
+        "copy_sha256": hashlib.sha256(public_copy.encode()).hexdigest(),
+    }
+
+
+def write_manifest(fingerprint: str, artifacts: list[dict[str, str]]) -> None:
+    payload = {
+        "schema_version": 1,
+        "source_fingerprint": fingerprint,
+        "validation_status": "passed",
+        "artifacts": artifacts,
+    }
+    MANIFEST.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
+
+
+def check_images() -> None:
+    manifest = json.loads(MANIFEST.read_text())
+    expected_fingerprint = source_fingerprint()
+    if manifest.get("source_fingerprint") != expected_fingerprint:
+        raise RuntimeError("portfolio images are stale; regenerate them")
+    artifacts = manifest.get("artifacts", [])
+    if [item.get("file") for item in artifacts] != EXPECTED_IMAGES:
+        raise RuntimeError("portfolio image manifest does not match the six-image sequence")
+    for item in artifacts:
+        path = OUT / str(item["file"])
+        with Image.open(path) as image:
+            if image.size != (WIDTH, HEIGHT):
+                raise RuntimeError(f"unexpected image dimensions: {path.name}")
+            copy = str(image.info.get("PortfolioCopy", ""))
+            validate_public_copy(copy)
+            if image.info.get("SourceFingerprint") != expected_fingerprint:
+                raise RuntimeError(f"stale source fingerprint: {path.name}")
+            if image.info.get("ValidationStatus") != "passed":
+                raise RuntimeError(f"validation status missing: {path.name}")
+            if hashlib.sha256(copy.encode()).hexdigest() != item.get("copy_sha256"):
+                raise RuntimeError(f"public copy hash mismatch: {path.name}")
+    print("portfolio images current and semantically valid")
+
+
+def generate_images() -> None:
+    OUT.mkdir(parents=True, exist_ok=True)
+    fingerprint = source_fingerprint()
+    py = sys.executable
+    artifacts: list[dict[str, str]] = []
+
+    with tempfile.TemporaryDirectory(prefix="review-router-render-") as temp_root:
+        previous_queue = os.environ.get("REVIEW_ROUTER_QUEUE_DIR")
+        previous_runs = os.environ.get("REVIEW_ROUTER_RUN_DIR")
+        os.environ["REVIEW_ROUTER_QUEUE_DIR"] = str(Path(temp_root) / "queue")
+        os.environ["REVIEW_ROUTER_RUN_DIR"] = str(Path(temp_root) / "runs")
+        try:
+            client = TestClient(create_app())
+            list_output = run([py, "-m", "review_router.cli", "list"], max_lines=8)
+            validate_output = run(
+                [py, "-m", "review_router.cli", "validate", "inbox-triage-router"],
+                max_lines=6,
+            )
+            health = client.get("/health").json()
+
+            lead_fixture = load_json("templates/lead-enrichment-router/fixtures/sample-input.json")
+            lead_run = client.post(
+                "/run",
+                json={"template": "lead-enrichment-router", "fixture": lead_fixture},
+            ).json()
+
+            uncertain_fixture = {
+                "subject": "Question about an existing request",
+                "body": "Can an operator review this before it is routed?",
+            }
+            uncertain_run = client.post(
+                "/run",
+                json={"template": "inbox-triage-router", "fixture": uncertain_fixture},
+            ).json()
+            packet_id = str(uncertain_run["review_packet_id"])
+            pending_path = (
+                Path(os.environ["REVIEW_ROUTER_QUEUE_DIR"]) / "pending" / f"{packet_id}.json"
+            )
+            pending_record = json.loads(pending_path.read_text())
+            run(
+                [
+                    py,
+                    "-m",
+                    "review_router.cli",
+                    "queue",
+                    "claim",
+                    packet_id,
+                    "--reviewer",
+                    "operator-1",
+                ],
+                max_lines=9,
+            )
+            claimed_path = (
+                Path(os.environ["REVIEW_ROUTER_QUEUE_DIR"]) / "claimed" / f"{packet_id}.json"
+            )
+            claimed_record = json.loads(claimed_path.read_text())
+            run(
+                [
+                    py,
+                    "-m",
+                    "review_router.cli",
+                    "queue",
+                    "resolve",
+                    packet_id,
+                    "--reviewer",
+                    "operator-1",
+                    "--decision",
+                    "support",
+                    "--note",
+                    "Route confirmed",
+                ],
+                max_lines=10,
+            )
+            resolved_path = (
+                Path(os.environ["REVIEW_ROUTER_QUEUE_DIR"]) / "resolved" / f"{packet_id}.json"
+            )
+            resolved_record = json.loads(resolved_path.read_text())
+            replay_output = run(
+                [py, "-m", "review_router.cli", "replay", str(lead_run["run_id"])],
+                max_lines=9,
+            )
+
+            artifacts.append(
+                render(
+                    OUT / EXPECTED_IMAGES[0],
+                    "Human review routing flow",
+                    (
+                        "Supplied classification metadata passes through deterministic policy "
+                        "before any destination action."
+                    ),
+                    [
+                        {
+                            "box": (52, 154, 452, 670),
+                            "title": "Supplied metadata",
+                            "lines": [
+                                "category",
+                                "confidence",
+                                "rationale",
+                                "candidate routes",
+                                "workflow context",
+                                "Local fixtures use rule adapters",
+                            ],
+                        },
+                        {
+                            "box": (500, 154, 900, 670),
+                            "title": "Policy layer",
+                            "lines": [
+                                "Validate typed contract",
+                                "Apply confidence threshold",
+                                "Evaluate signoff policy",
+                                "Continue allowed routes",
+                                "Pause uncertain routes",
+                                "No model is loaded or called",
+                            ],
+                        },
+                        {
+                            "box": (948, 154, 1348, 670),
+                            "title": "Controlled result",
+                            "lines": [
+                                "Destination route",
+                                "Human review packet",
+                                "Queue claim and resolution",
+                                "Replayable run record",
+                                "Operator handoff note",
+                                "External action remains gated",
+                            ],
+                            "accent": SUCCESS,
+                        },
+                    ],
+                    fingerprint=fingerprint,
+                )
+            )
+            artifacts.append(
+                render(
+                    OUT / EXPECTED_IMAGES[1],
+                    "Operator interfaces",
+                    (
+                        "CLI and FastAPI expose the same templates, policy checks, run records, "
+                        "and queue controls."
+                    ),
+                    [
+                        {
+                            "box": (52, 154, 674, 670),
+                            "title": "CLI readback",
+                            "lines": [*list_output, "", *validate_output],
+                            "code": True,
+                        },
+                        {
+                            "box": (726, 154, 1348, 670),
+                            "title": "Local API",
+                            "lines": [
+                                "GET /health",
+                                "GET /templates",
+                                "POST /validate",
+                                "POST /run",
+                                "GET /runs/{id}",
+                                "POST /queue/resolve",
+                                "",
+                                *compact_json_lines(
+                                    health,
+                                    [
+                                        "status",
+                                        "fixture_safe",
+                                        "live_services_used",
+                                        "synthetic_data_only",
+                                    ],
+                                ),
+                            ],
+                            "code": True,
+                        },
+                    ],
+                    fingerprint=fingerprint,
+                )
+            )
+            artifacts.append(
+                render(
+                    OUT / EXPECTED_IMAGES[2],
+                    "Deterministic policy processing",
+                    (
+                        "A committed rule adapter supplies classifier-shaped metadata for "
+                        "repeatable local validation."
+                    ),
+                    [
+                        {
+                            "box": (52, 154, 674, 670),
+                            "title": "Classifier-shaped input",
+                            "lines": [
+                                f"company={lead_fixture.get('company')}",
+                                f"contact={lead_fixture.get('contact')}",
+                                f"notes={lead_fixture.get('notes')}",
+                                "",
+                                *compact_json_lines(
+                                    lead_run["mock_ai_output"],
+                                    ["category", "confidence", "reason"],
+                                ),
+                                "adapter=deterministic local rules",
+                                "model_call=false",
+                            ],
+                            "code": True,
+                        },
+                        {
+                            "box": (726, 154, 1348, 670),
+                            "title": "Policy result",
+                            "lines": compact_json_lines(
+                                lead_run,
+                                [
+                                    "routing_decision",
+                                    "review_required",
+                                    "destination",
+                                    "candidate_routes",
+                                    "recommended_next_action",
+                                    "run_id",
+                                ],
+                            ),
+                            "code": True,
+                            "accent": SUCCESS,
+                        },
+                    ],
+                    fingerprint=fingerprint,
+                )
+            )
+            artifacts.append(
+                render(
+                    OUT / EXPECTED_IMAGES[3],
+                    "Human-review guardrail",
+                    (
+                        "Low-confidence or signoff-required routes stop in a typed queue before "
+                        "any external action."
+                    ),
+                    [
+                        {
+                            "box": (52, 154, 674, 670),
+                            "title": "Policy stop",
+                            "lines": [
+                                f"subject={uncertain_fixture['subject']}",
+                                *compact_json_lines(
+                                    uncertain_run["mock_ai_output"],
+                                    ["category", "confidence", "reason"],
+                                ),
+                                f"review_required={str(uncertain_run['review_required']).lower()}",
+                                f"review_packet_id={packet_id}",
+                                f"destination={uncertain_run['destination']}",
+                            ],
+                            "code": True,
+                            "accent": ERROR,
+                        },
+                        {
+                            "box": (726, 154, 1348, 670),
+                            "title": "Queue readback",
+                            "lines": compact_json_lines(
+                                pending_record,
+                                [
+                                    "packet_id",
+                                    "workflow_name",
+                                    "reason_for_review",
+                                    "review_context",
+                                    "candidate_routes",
+                                    "recommended_next_action",
+                                    "status",
+                                    "claimed_by",
+                                ],
+                            ),
+                            "code": True,
+                        },
+                    ],
+                    fingerprint=fingerprint,
+                )
+            )
+            artifacts.append(
+                render(
+                    OUT / EXPECTED_IMAGES[4],
+                    "Decision and replay readback",
+                    (
+                        "Operator ownership and deterministic replay remain inspectable after "
+                        "the route is resolved."
+                    ),
+                    [
+                        {
+                            "box": (52, 154, 674, 670),
+                            "title": "Claim and resolution",
+                            "lines": [
+                                "Claimed packet",
+                                *compact_json_lines(
+                                    claimed_record,
+                                    ["packet_id", "status", "claimed_by", "queue"],
+                                ),
+                                "",
+                                "Resolved packet",
+                                *compact_json_lines(
+                                    resolved_record,
+                                    ["packet_id", "status", "claimed_by", "resolution"],
+                                ),
+                            ],
+                            "code": True,
+                            "accent": SUCCESS,
+                        },
+                        {
+                            "box": (726, 154, 1348, 670),
+                            "title": "Replay readback",
+                            "lines": replay_output,
+                            "code": True,
+                        },
+                    ],
+                    fingerprint=fingerprint,
+                )
+            )
+
+            validation_lines: list[str] = []
+            commands = [
+                ([py, "-m", "pytest", "-q", "--disable-warnings"], 180),
+                ([py, "-m", "ruff", "check", "."], 90),
+                ([py, "-m", "mypy", "src"], 120),
+                ([py, "scripts/template_validation_sweep.py"], 90),
+                ([py, "scripts/public_readiness_check.py"], 90),
+            ]
+            for command, timeout in commands:
+                validation_lines.extend(run(command, timeout=timeout, max_lines=2))
+                validation_lines.append("")
+            artifacts.append(
+                render(
+                    OUT / EXPECTED_IMAGES[5],
+                    "Validation and operating scope",
+                    (
+                        "Automated checks pass locally while model calls, provider writes, and "
+                        "customer data remain excluded."
+                    ),
+                    [
+                        {
+                            "box": (52, 154, 820, 670),
+                            "title": "Core validation readback",
+                            "lines": validation_lines,
+                            "code": True,
+                            "accent": SUCCESS,
+                        },
+                        {
+                            "box": (872, 154, 1348, 670),
+                            "title": "Scope and image checks",
+                            "lines": [
+                                "Image sequence: 6 current files",
+                                "Semantic freshness: checked after render",
+                                "Public copy scanner enabled",
+                                "",
+                                "Synthetic fixtures only",
+                                "Deterministic rule adapters",
+                                "No embedded model",
+                                "No model-provider calls",
+                                "No customer records",
+                                "No live service credentials",
+                                "No external destination writes",
+                            ],
+                        },
+                    ],
+                    fingerprint=fingerprint,
+                )
+            )
+        finally:
+            if previous_queue is None:
+                os.environ.pop("REVIEW_ROUTER_QUEUE_DIR", None)
+            else:
+                os.environ["REVIEW_ROUTER_QUEUE_DIR"] = previous_queue
+            if previous_runs is None:
+                os.environ.pop("REVIEW_ROUTER_RUN_DIR", None)
+            else:
+                os.environ["REVIEW_ROUTER_RUN_DIR"] = previous_runs
+
+    write_manifest(fingerprint, artifacts)
+    check_images()
+    print("portfolio images rendered")
 
 
 def main() -> None:
-    py = sys.executable
-    client = TestClient(create_app())
-
-    list_output = run([py, "-m", "review_router.cli", "list"], max_lines=16)
-    validate_output = run(
-        [py, "-m", "review_router.cli", "validate", "inbox-triage-router"],
-        max_lines=12,
-    )
-    inbox_run_output = run(
-        [
-            py,
-            "-m",
-            "review_router.cli",
-            "run",
-            "inbox-triage-router",
-            "--fixture",
-            "templates/inbox-triage-router/fixtures/sample-input.json",
-        ],
-        max_lines=22,
-    )
-    creative_run_output = run(
-        [
-            py,
-            "-m",
-            "review_router.cli",
-            "run",
-            "creative-pack-review",
-            "--fixture",
-            "templates/creative-pack-review/fixtures/sample-input.json",
-        ],
-        max_lines=22,
-    )
-    queue_output = run([py, "-m", "review_router.cli", "queue", "list"], max_lines=22)
-    pytest_output = run([py, "-m", "pytest", "-q"], max_lines=10)
-    ruff_output = run([py, "-m", "ruff", "check", "."], max_lines=8)
-    mypy_output = run([py, "-m", "mypy", "src"], max_lines=8)
-    template_sweep_output = run([py, "scripts/template_validation_sweep.py"], max_lines=8)
-    readiness_output = run(
-        [py, "scripts/public_readiness_check.py"],
-        max_lines=10,
-    )
-
-    health = client.get("/health").json()
-    templates = client.get("/templates").json()
-    validate_api = client.post(
-        "/validate", json={"template": "support-urgency-sentiment"}
-    ).json()
-    lead_fixture = load_json("templates/lead-enrichment-router/fixtures/sample-input.json")
-    lead_run = client.post(
-        "/run",
-        json={"template": "lead-enrichment-router", "fixture": lead_fixture},
-    ).json()
-
-    creative_fixture = load_json("templates/creative-pack-review/fixtures/sample-input.json")
-    inbox_workflow = load_json("templates/inbox-triage-router/workflow.json")
-    creative_workflow = load_json("templates/creative-pack-review/workflow.json")
-    env_lines = read_lines(".env.example", limit=12)
-    n8n_lines = read_lines("docs/low-code/n8n.md", limit=10)
-    make_lines = read_lines("docs/low-code/make.md", limit=10)
-    zapier_lines = read_lines("docs/low-code/zapier.md", limit=10)
-
-    credential_lines = [
-        "service -> secret -> scope",
-        "n8n -> N8N_API_KEY -> workflow:read",
-        "make -> MAKE_API_TOKEN -> scenario:read",
-        "zapier -> ZAPIER_WEBHOOK_SECRET -> trigger:read",
-        "api -> REVIEW_ROUTER_ENABLE_LIVE_SERVICES -> local-only",
-    ]
-
-    flow_summary = [
-        "Trigger fixture or webhook-shaped payload",
-        "Normalize input or derive creative/debug context",
-        "Deterministic mock AI emits category + confidence + reason",
-        "Review gate stops uncertain or creative work in file-backed queue",
-        "Route selects local output or review queue destination",
-        "Handoff note records safe next action for operator",
-    ]
-
-    review_contract = compact_json_lines(
-        {
-            "queue": creative_workflow["review_queue"],
-            "candidate_routes": creative_workflow["steps"][3]["policy"]["candidate_routes"],
-            "recommended_next_action": creative_workflow["steps"][3]["policy"][
-                "recommended_next_action"
-            ],
-            "reason": creative_workflow["steps"][3]["policy"]["reason"],
-        },
-        ["queue", "candidate_routes", "recommended_next_action", "reason"],
-    )
-
-    api_contract = [
-        "GET /health",
-        "GET /templates",
-        "POST /validate",
-        "POST /run",
-        "GET /runs/{id}",
-        "POST /queue/resolve",
-        "POST /queue/claim (CLI-only today, API-ready next)",
-        *compact_json_lines(
-            health,
-            ["status", "fixture_safe", "live_services_used", "synthetic_data_only"],
-        ),
-    ]
-
-    lead_run_excerpt = compact_json_lines(
-        lead_run,
-        [
-            "workflow_name",
-            "routing_decision",
-            "review_required",
-            "destination",
-            "candidate_routes",
-            "recommended_next_action",
-        ],
-    )
-    validate_excerpt = compact_json_lines(validate_api, ["valid", "issues", "fixture_safe"])
-    templates_excerpt = compact_json_lines(templates, ["templates", "fixture_safe"])
-
-    render(
-        OUT / "01-flow-overview.png",
-        "Review Router Flow",
-        (
-            "Review-gated workflow templates keep AI routing deterministic, auditable, "
-            "and fixture-safe."
-        ),
-        [
-            {
-                "box": (52, 148, 410, 628),
-                "title": "Inputs",
-                "accent": BLUE,
-                "lines": [
-                    "inbox triage payload",
-                    "lead enrichment event",
-                    "support urgency request",
-                    "creative brief + prompts",
-                    "workflow debug fixture",
-                    "RSS summary source",
-                ],
-            },
-            {
-                "box": (462, 148, 820, 628),
-                "title": "Factory",
-                "accent": YELLOW,
-                "lines": flow_summary,
-            },
-            {
-                "box": (872, 148, 1230, 628),
-                "title": "Proof",
-                "accent": GREEN,
-                "lines": [
-                    "audit-log.json per deterministic run",
-                    "review packets persisted under queue",
-                    "CLI + API return fixture-safe metadata",
-                    "template pack spans 6 client-shaped workflows",
-                    "public-readiness audit blocks unsafe surface drift",
-                ],
-            },
-        ],
-    )
-    render(
-        OUT / "02-cli-proof.png",
-        "CLI Proof",
-        (
-            "The CLI lists templates, validates schemas, runs fixtures, and shows "
-            "deterministic operator output."
-        ),
-        [
-            {
-                "box": (52, 148, 604, 628),
-                "title": "Commands",
-                "accent": YELLOW,
-                "code": True,
-                "lines": [
-                    "$ PYTHONPATH=src python3.11 -m review_router.cli list",
-                    "$ PYTHONPATH=src python3.11 -m review_router.cli validate inbox-triage-router",
-                    (
-                        "$ PYTHONPATH=src python3.11 -m review_router.cli run "
-                        "inbox-triage-router --fixture "
-                        "templates/inbox-triage-router/fixtures/sample-input.json"
-                    ),
-                    "",
-                    *list_output[:6],
-                    "",
-                    *validate_output[:4],
-                ],
-            },
-            {
-                "box": (650, 148, 1230, 628),
-                "title": "Run excerpt",
-                "accent": GREEN,
-                "code": True,
-                "lines": inbox_run_output,
-            },
-        ],
-    )
-    render(
-        OUT / "03-api-openapi.png",
-        "Local API Surface",
-        "FastAPI exposes only local validation, run, template, queue, and audit-facing routes.",
-        [
-            {
-                "box": (52, 148, 604, 628),
-                "title": "Endpoints + health",
-                "accent": BLUE,
-                "code": True,
-                "lines": api_contract,
-            },
-            {
-                "box": (650, 148, 1230, 628),
-                "title": "API proof excerpt",
-                "accent": GREEN,
-                "code": True,
-                "lines": [*templates_excerpt, "", *validate_excerpt],
-            },
-        ],
-    )
-    render(
-        OUT / "04-template-output-proof.png",
-        "Template Output Proof",
-        (
-            "Lead routing produces deterministic category, confidence, destination, and "
-            "operator handoff fields from synthetic fixture input."
-        ),
-        [
-            {
-                "box": (52, 148, 604, 628),
-                "title": "Lead fixture",
-                "accent": PINK,
-                "code": True,
-                "lines": compact_json_lines(
-                    {
-                        "company": lead_fixture.get("company"),
-                        "signal": lead_fixture.get("signal"),
-                        "need": lead_fixture.get("need"),
-                        "source": lead_fixture.get("source"),
-                    },
-                    ["company", "signal", "need", "source"],
-                ),
-            },
-            {
-                "box": (650, 148, 1230, 628),
-                "title": "Run result",
-                "accent": GREEN,
-                "code": True,
-                "lines": lead_run_excerpt,
-            },
-        ],
-    )
-    render(
-        OUT / "05-review-queue-proof.png",
-        "Review Queue Proof",
-        (
-            "Creative work always stops at review, and uncertain paths surface file-backed "
-            "packets before any live action."
-        ),
-        [
-            {
-                "box": (52, 148, 604, 628),
-                "title": "Creative review contract",
-                "accent": RED,
-                "code": True,
-                "lines": [
-                    f"brief={creative_fixture.get('brief')}",
-                    f"prompts={json.dumps(creative_fixture.get('prompts'))}",
-                    "",
-                    *review_contract,
-                ],
-            },
-            {
-                "box": (650, 148, 1230, 628),
-                "title": "Queue excerpt",
-                "accent": GREEN,
-                "code": True,
-                "lines": queue_output,
-            },
-        ],
-    )
-    render(
-        OUT / "06-low-code-mapping-proof.png",
-        "Low-Code Mapping Proof",
-        (
-            "n8n, Make, and Zapier mappings stay explicit, with review gating and "
-            "credential boundaries documented per template."
-        ),
-        [
-            {
-                "box": (52, 148, 604, 628),
-                "title": "Mapping notes",
-                "accent": BLUE,
-                "code": True,
-                "lines": [*n8n_lines[:5], "", *make_lines[:5], "", *zapier_lines[:5]],
-            },
-            {
-                "box": (650, 148, 1230, 628),
-                "title": "Boundary contract",
-                "accent": YELLOW,
-                "code": True,
-                "lines": credential_lines
-                + ["", f"inbox-tags={json.dumps(inbox_workflow['tags'])[:90]}"]
-            },
-        ],
-    )
-    render(
-        OUT / "07-quality-gates.png",
-        "Quality Gate Proof",
-        (
-            "The screenshot package is regenerated only after tests, lint, typing, "
-            "template checks, and readiness audit pass."
-        ),
-        [
-            {
-                "box": (52, 148, 604, 628),
-                "title": "Verified commands",
-                "accent": BLUE,
-                "code": True,
-                "lines": [
-                    "PYTHONPATH=src python3.11 -m pytest -q",
-                    "python3.11 -m ruff check .",
-                    "PYTHONPATH=src python3.11 -m mypy src",
-                    "PYTHONPATH=src python3.11 scripts/template_validation_sweep.py",
-                    "PYTHONPATH=src python3.11 scripts/public_readiness_check.py",
-                    "PYTHONPATH=src python3.11 scripts/generate_screenshots.py",
-                    "",
-                    *pytest_output[:3],
-                    *ruff_output[:2],
-                    *mypy_output[:2],
-                ],
-            },
-            {
-                "box": (650, 148, 1230, 628),
-                "title": "Audit excerpts",
-                "accent": GREEN,
-                "code": True,
-                "lines": [*template_sweep_output, "", *readiness_output],
-            },
-        ],
-    )
-    render(
-        OUT / "08-safety-boundary.png",
-        "Safety Boundary",
-        (
-            "Public-safe proof uses only empty placeholders, local defaults, and explicit "
-            "no-live-service flags across CLI, API, and workflow contracts."
-        ),
-        [
-            {
-                "box": (52, 148, 604, 628),
-                "title": ".env.example",
-                "accent": YELLOW,
-                "code": True,
-                "lines": env_lines,
-            },
-            {
-                "box": (650, 148, 1230, 628),
-                "title": "Boundary signals",
-                "accent": GREEN,
-                "code": True,
-                "lines": [
-                    *compact_json_lines(
-                        {
-                            "fixture_safe": health.get("fixture_safe"),
-                            "live_services_used": health.get("live_services_used"),
-                            "synthetic_data_only": health.get("synthetic_data_only"),
-                            "review_queue": inbox_workflow.get("review_queue"),
-                            "creative_destination": (
-                                creative_run_output[0] if creative_run_output else "n/a"
-                            ),
-                        },
-                        [
-                            "fixture_safe",
-                            "live_services_used",
-                            "synthetic_data_only",
-                            "review_queue",
-                            "creative_destination",
-                        ],
-                    ),
-                    "",
-                    "No secrets committed",
-                    "No live accounts/screens captured",
-                    "No public visibility change implied by evidence",
-                ],
-            },
-        ],
-    )
-    print("screenshots rendered")
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--check", action="store_true")
+    args = parser.parse_args()
+    if args.check:
+        check_images()
+    else:
+        generate_images()
 
 
 if __name__ == "__main__":

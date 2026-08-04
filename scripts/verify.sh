@@ -16,3 +16,4 @@ PYTHONPATH=src "$PYTHON_BIN" -m pytest -q
 PYTHONPATH=src "$PYTHON_BIN" -m mypy src
 PYTHONPATH=src "$PYTHON_BIN" scripts/template_validation_sweep.py
 PYTHONPATH=src "$PYTHON_BIN" scripts/public_readiness_check.py
+PYTHONPATH=src "$PYTHON_BIN" scripts/generate_screenshots.py --check

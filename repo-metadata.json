@@ -1,7 +1,7 @@
 {
   "name": "review-router",
-  "title": "Review Router",
-  "description": "Deterministic, auditable review-gated AI workflow templates for low-code and API automation.",
+  "title": "Human Review Router",
+  "description": "Deterministic policy and human-review controls for supplied classifier metadata in low-code and API automation.",
   "visibility_target": "public-ready",
   "topics": [
     "n8n",
@@ -14,5 +14,5 @@
     "human-in-the-loop",
     "audit-log"
   ],
-  "automation_kit_relationship": "Thin spoke around Automation Kit vocabulary and fixture-safe proof surfaces."
+  "automation_kit_relationship": "Thin spoke around Automation Kit vocabulary and fixture-safe policy controls."
 }

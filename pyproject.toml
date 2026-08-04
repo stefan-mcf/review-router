@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "review-router"
 version = "0.2.0"
-description = "Deterministic, auditable review-gated AI workflow templates for low-code and API automation"
+description = "Deterministic policy and human-review controls for supplied classifier metadata"
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"

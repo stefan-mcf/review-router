@@ -1,8 +1,8 @@
-# Sandbox Walkthrough
+# Local Operation
 
 1. List available templates.
 2. Validate a template contract.
-3. Run a fixture through the deterministic runtime.
+3. Run a fixture through the deterministic policy runtime.
 4. Inspect the emitted audit log.
 5. If review is required, claim and resolve the review packet.
 6. Replay the run and confirm deterministic hash match.

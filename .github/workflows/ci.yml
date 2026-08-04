@@ -27,3 +27,7 @@ jobs:
         run: |
           . .venv/bin/activate
           bash scripts/verify.sh
+      - name: Check portfolio image freshness
+        run: |
+          . .venv/bin/activate
+          PYTHONPATH=src python scripts/generate_screenshots.py --check

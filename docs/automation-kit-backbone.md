@@ -10,9 +10,9 @@ What Review Router reuses conceptually:
 
 What remains unique to Review Router:
 - typed workflow contract with mandatory review-gate step;
-- file-backed review queue proof surface;
+- file-backed review queue implementation;
 - low-code mapping tables for n8n, Make, and Zapier;
-- client-shaped workflow templates and proposal-facing proof copy.
+- client-shaped workflow templates and buyer-facing implementation copy.
 
 Optional integration contract:
 - if `automation_kit` is installed, Review Router can detect it and report optional integration status;

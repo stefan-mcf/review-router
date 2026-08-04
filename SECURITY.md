@@ -1,6 +1,6 @@
 # Security Policy
 
-This project is a local, fixture-safe proof surface.
+This project is a local, fixture-safe policy and review surface.
 
 Please do not open public issues containing secrets, customer data, or live credentials.
 

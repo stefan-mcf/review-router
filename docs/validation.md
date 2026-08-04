@@ -1,4 +1,4 @@
-# Evidence
+# Validation
 
 Primary verification bundle:
 
@@ -6,7 +6,7 @@ Primary verification bundle:
 bash scripts/verify.sh
 ```
 
-Key proof commands:
+Key interface commands:
 
 ```bash
 PYTHONPATH=src python3.11 -m review_router.cli list
@@ -16,9 +16,10 @@ PYTHONPATH=src python3.11 -m review_router.cli run creative-pack-review --fixtur
 PYTHONPATH=src python3.11 -m review_router.cli queue list
 ```
 
-What the evidence proves:
+Validated behavior:
 - typed workflow contracts validate locally;
 - deterministic runs emit audit trails and replay cleanly;
-- uncertain or creative outputs stop at a manual review packet;
+- uncertain or signoff-required outputs stop at a manual review packet;
 - API and CLI surfaces remain fixture-safe;
-- public-surface audit checks run before any human push/publicity gate.
+- public-surface audit checks run before any human push or visibility gate;
+- committed images carry a current semantic source fingerprint and passed validation status.
