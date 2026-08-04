@@ -3,7 +3,7 @@
 Each template maps to:
 - trigger
 - formatter / code step
-- AI placeholder
+- upstream classifier placeholder
 - paths for route selection and review gate
 - final action or review handoff
 

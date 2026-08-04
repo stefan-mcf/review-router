@@ -6,7 +6,7 @@ from review_router.runtime import build_runtime
 
 
 def run_ai_triage(message: dict[str, Any]) -> dict[str, Any]:
-    """Compatibility helper for the original inbox-triage proof surface."""
+    """Compatibility helper for the original inbox-triage interface."""
 
     runtime = build_runtime()
     result = runtime.run("inbox-triage-router", message)

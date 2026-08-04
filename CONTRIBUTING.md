@@ -1,6 +1,6 @@
 # Contributing
 
-This repository is optimized for fixture-safe, deterministic automation proofs.
+This repository is optimized for fixture-safe, deterministic automation controls.
 
 Rules for contributions:
 - keep synthetic fixtures only;

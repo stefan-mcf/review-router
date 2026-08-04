@@ -3,7 +3,7 @@
 Each template maps to the same control pattern:
 - Webhook / Trigger
 - Set or Code step for normalization
-- deterministic AI placeholder step
+- upstream classifier placeholder step
 - IF / Switch node for review gate and route split
 - destination node or review queue persistence
 
