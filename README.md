@@ -6,6 +6,8 @@ Deterministic policy and human-review controls for n8n, Make, Zapier, Python, an
 
 ## Overview
 
+**Role:** policy contracts, review routing, CLI/API interfaces, tests and handover documentation. **Status:** an SM Systems reference implementation with reproducible local scenarios.
+
 Human Review Router consumes category, confidence, and rationale fields from an upstream classifier, then applies typed policy to decide whether a workflow can continue or must pause for an operator. The local scenarios use deterministic rule adapters so every route can be reproduced without credentials or provider access.
 
 This repository does not load, host, train, or call an AI model. A production implementation connects an approved upstream classifier at the documented boundary.
@@ -111,4 +113,4 @@ Production use requires an approved classifier, real identity and access control
 
 MIT License. See [LICENSE](LICENSE).
 
-Part of [Stefan's automation tools catalog](https://github.com/stefan-mcf/automation-tools).
+Part of [Stefan's systems and automation portfolio](https://github.com/stefan-mcf#supporting-tools).
