@@ -2,26 +2,21 @@
 
 Deterministic policy and human-review controls for n8n, Make, Zapier, Python, and API-first automation workflows.
 
+**Status:** an SM Systems reference implementation with reproducible local scenarios.
+
+**My contribution:** policy contracts, review routing, CLI/API interfaces, tests and handover documentation.
+
 [Case study](docs/case-study.md) | [Architecture](docs/architecture.md) | [Local operation](docs/local-operation.md)
 
-## Overview
+![Generated local processing example](docs/screenshots/03-core-processing.png)
 
-**Role:** policy contracts, review routing, CLI/API interfaces, tests and handover documentation. **Status:** an SM Systems reference implementation with reproducible local scenarios.
+*Generated panel from synthetic local scenarios. Further views are in the [image index](docs/screenshots/README.md); recorded totals are separate from current CI.*
+
+## How it works
 
 Human Review Router consumes category, confidence, and rationale fields from an upstream classifier, then applies typed policy to decide whether a workflow can continue or must pause for an operator. The local scenarios use deterministic rule adapters so every route can be reproduced without credentials or provider access.
 
 This repository does not load, host, train, or call an AI model. A production implementation connects an approved upstream classifier at the documented boundary.
-
-## Capabilities
-
-- Typed contracts for triggers, classifier output, confidence policy, review gates, routes, destinations, and handoff metadata.
-- Deterministic fixture execution with replayable run records and stable hashes.
-- File-backed review packets for ambiguous, low-confidence, or signoff-required outcomes.
-- Queue claim and resolution lifecycle for accountable operator decisions.
-- Six scenario families covering lead enrichment, inbox triage, support urgency, content routing, creative approval, and workflow-debug routing.
-- Integration mapping for n8n, Make, and Zapier without claiming live provider execution.
-
-## Operating flow
 
 1. Validate the workflow contract and incoming payload.
 2. Accept category, confidence, and rationale fields from the classifier boundary.
@@ -30,40 +25,9 @@ This repository does not load, host, train, or call an AI model. A production im
 5. Write a review packet when confidence or policy requires an operator decision.
 6. Record the selected route, handoff note, and replayable run history.
 
-## Interfaces
+The CLI and FastAPI interfaces expose validation, execution, replay and queue resolution. Classification metadata comes from an upstream boundary; this code does not load or call a model.
 
-- **CLI:** list templates, validate contracts, run fixtures, replay runs, and manage the review queue.
-- **FastAPI/OpenAPI:** health, template discovery, validation, execution, run lookup, and queue resolution.
-- **Workflow templates:** six typed JSON contracts with fixtures and expected outputs.
-- **Integration notes:** n8n, Make, and Zapier mapping details with credential boundaries.
-
-## System views
-
-### System flow
-
-![System flow](docs/screenshots/01-system-flow.png)
-
-### Interface surface
-
-![Interface surface](docs/screenshots/02-interface-surface.png)
-
-### Core processing
-
-![Core processing](docs/screenshots/03-core-processing.png)
-
-### Guardrail and failure path
-
-![Guardrail path](docs/screenshots/04-guardrail-path.png)
-
-### Output and readback
-
-![Output readback](docs/screenshots/05-output-readback.png)
-
-### Validation and scope
-
-![Validation and scope](docs/screenshots/06-validation-scope.png)
-
-## Run locally
+## Usage
 
 ```bash
 python3.11 -m venv .venv
@@ -95,22 +59,19 @@ PYTHONPATH=src python scripts/generate_screenshots.py
 PYTHONPATH=src python scripts/generate_screenshots.py --check
 ```
 
-## Scope boundaries
+## Scope and current state
 
 Committed scenarios use synthetic inputs, deterministic rule adapters, and empty credential placeholders. They do not call an AI model or any live external service. No customer data, provider write, cloud resource, public-visibility change, release, or external-sharing action is included.
 
 Production use requires an approved classifier, real identity and access controls, provider-specific credentials, persistent storage, monitoring, and operator acceptance testing.
 
-## Project documentation
+## Documentation
 
 - [Validation record](docs/validation.md)
 - [API contract](docs/api.md)
 - [Architecture](docs/architecture.md)
 - [Low-code mappings](docs/low-code/)
 - [Public-surface checklist](docs/public-readiness-checklist.md)
+- [Image index](docs/screenshots/README.md)
 
-## License
-
-MIT License. See [LICENSE](LICENSE).
-
-Part of [Stefan's systems and automation portfolio](https://github.com/stefan-mcf#supporting-tools).
+MIT. See [LICENSE](LICENSE).
