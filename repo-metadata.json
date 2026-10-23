@@ -1,18 +1,15 @@
 {
   "name": "review-router",
   "title": "Human Review Router",
-  "description": "Deterministic policy and human-review controls for supplied classifier metadata in low-code and API automation.",
-  "visibility_target": "public-ready",
+  "description": "Typed policy engine that routes supplied classifier metadata to an allowed action or accountable human review.",
+  "visibility_target": "public",
   "topics": [
-    "n8n",
-    "make",
-    "zapier",
-    "ai-workflows",
-    "workflow-automation",
-    "api-integration",
-    "airtable",
+    "python",
+    "fastapi",
+    "pydantic",
+    "policy-engine",
     "human-in-the-loop",
-    "audit-log"
+    "workflow-automation"
   ],
   "automation_kit_relationship": "Thin spoke around Automation Kit vocabulary and fixture-safe policy controls."
 }
